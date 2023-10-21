@@ -355,3 +355,93 @@ expect: () => <dynamic>[
 ```
 
 Similarly we test all the methods and events in our cubits or blocs, to verify their proper working. I request the reader to try out Bloc testing for themselves using the official docs mentioned above to get more clear understanding for the same.
+
+## Widget Tests
+
+The following are characteristics of Widget Tests:
+
+ * validate the appearance and interactions of individual widgets.
+ * validate the correctness of UI components.
+ * testing widgets in isolation.
+
+ Typically Widget Tests are faster than Integration Tests. For example, in AppFlowy for every integration test, we have to build the app itself and then do testing, but in Widget tests you pump the widget in isolation of AppFlowy. Thus it is much faster.
+
+ For Widget Testing in Flutter, we pump the widget under test using the `WidgetTester` class. Read more about WidgetTesting on [official docs](https://docs.flutter.dev/cookbook/testing/widget/introduction)
+
+ To write your widget tests for AppFlowy, you will have to create a new file in this directory:
+
+ ```
+ frontend/appflowy_flutter/test/widget_test
+ ```
+
+Let us look at an example to get more familiar with WidgetTesting. The full code of our example can be found here: 
+
+ ```
+ appflowy_flutter/test/widget_test/workspace/settings/settings_customize_shortcuts_view_test.dart
+ ```
+
+Our test is written to verify the Widget `SettingsCustomizeShortcutsView`. This is a widget that depends on a bloc for its state. And according to different states of the Bloc, it renders itself.
+In an ideal state, when we have correct data, this widget simply shows a list view of shorcuts. To check this widget's code, go here:
+
+```
+appflowy_flutter/lib/workspace/presentation/settings/widgets/settings_customize_shortcuts_view.dart
+```
+
+This is how the widget appears in AppFlowy:
+
+![img.png](../../../../.gitbook/assets/settings-customize-shortcuts-view.png)
+
+So here's the code for the test:
+
+```dart
+void main() {
+  group(
+    "CustomizeShortcutsView",
+    () {
+      group(
+        "should be displayed in ViewState",
+        () {
+          late ShortcutsCubit mockShortcutsCubit;
+
+          setUp(() {
+            mockShortcutsCubit = MockShortcutsCubit();
+          });
+
+          testWidgets(
+            'Shows ShortcutsList when cubit emits [ShortcutsStatus.success]',
+            (widgetTester) async {
+              KeyEventResult dummyHandler(EditorState e) =>
+                  KeyEventResult.handled;
+
+              final shortcuts = <CommandShortcutEvent>[
+               ...
+              ];
+
+              when(() => mockShortcutsCubit.state).thenReturn(
+                ShortcutsState(status: ShortcutsStatus.success, commandShortcutEvents: shortcuts),
+              );
+              await widgetTester.pumpWidget(
+                BlocProvider.value(
+                  value: mockShortcutsCubit,
+                  child:
+                      const MaterialApp(home: SettingsCustomizeShortcutsView()),
+                ),
+              );
+
+              await widgetTester.pump();
+
+              final listViewFinder = find.byType(ShortcutsListView);
+              final foundShortcuts = widgetTester
+                  .widget<ShortcutsListView>(listViewFinder)
+                  .shortcuts;
+
+              expect(listViewFinder, findsOneWidget);
+              expect(foundShortcuts, shortcuts);
+            },
+          );
+```
+
+Notice how we use the `testWidget()` method to test our code. This method takes in a string *description* and a callback method which is going to use the `WidgetTester` class provided by Flutter.
+
+
+ 
